@@ -1,1 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Percentage Multiplier Trainer (with Amounts + Hint Tab)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#eef3fb;
+      --card:#ffffff;
+      --accent:#5b73f1;
+      --accent-2:#3846a5;
+      --danger:#c62828;
+      --success:#16a34a;
+      --text:#111827;
+      --muted:#6b7280;
+      --ink:#1f2937;
+      --chip:#eef2ff;
+      --shadow:0 12px 30px rgba(31,41,55,.18);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 85% -20%, #dfe6ff 0, transparent 60%),
+        radial-gradient(1200px 600px at -10% 110%, #ffdfe6 0, transparent 60%),
+        var(--bg);
+      min-height:100vh;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding:2rem 1rem;
+    }
+    .card{
+      width:min(860px,98%);
+      background:var(--card);
+      border-radius:1rem;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .header{
+      padding:1.2rem 1.6rem;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      color:#fff;
+      display:flex;
+      align-items:center;
+      gap:1rem;
+      flex-wrap:wrap;
+    }
+    .header h1{margin:0;font-size:1.25rem;letter-spacing:.3px}
+    .badge{
+      display:inline-flex;align-items:center;gap:.45rem;
+      padding:.25rem .6rem;border-radius:.6rem;background:rgba(255,255,255,.16);
+      font-weight:700;font-size:.85rem
+    }
+    .body{padding:1.4rem 1.6rem}
+    #question{font-weight:700;line-height:1.55;margin:.4rem 0 1rem;font-size:1.08rem}
+    .note{margin:.2rem 0 .9rem;color:#374151;font-size:.92rem;background:#f8fafc;border:1px solid #e5e7eb;border-radius:.6rem;padding:.6rem .7rem}
+    label[for="ansInput"]{font-weight:800}
+    input[type="number"], input[type="text"]{
+      width:100%;max-width:260px;margin-top:.35rem;
+      font-size:1.08rem;padding:.6rem .75rem;border:2px solid #c6cfd9;border-radius:.55rem;transition:border-color .15s ease, box-shadow .2s ease, background .2s ease
+    }
+    input[type="number"]:focus, input[type="text"]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,115,241,.18)}
+    .controls{margin-top:1rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+    button{
+      border:none;border-radius:.55rem;cursor:pointer;font-weight:800;
+      padding:.6rem 1.1rem;font-size:.98rem;letter-spacing:.2px;
+      transition:transform .06s ease, background .15s ease, box-shadow .2s ease;
+    }
+    #checkBtn{background:var(--accent);color:#fff;box-shadow:0 6px 14px rgba(91,115,241,.35)}
+    #checkBtn:hover{background:#4e63d6}
+    #checkBtn:active{transform:translateY(1px)}
+    #nextBtn{background:#0f172a;color:#fff;display:none}
+    #nextBtn:hover{background:#0b1220}
+    #hintBtn{background:#e5e7eb}
+    #hintBtn:hover{background:#d9dbe0}
+    #feedback{min-height:1.6rem;margin-top:.65rem;font-weight:800}
+    .no{color:var(--danger)} /* wrong → red */
+    .yes{color:var(--success)} /* right → green */
+
+    /* Shake animation for wrong answers */
+    .shake{animation:shake .28s linear}
+    @keyframes shake{
+      0%,100%{transform:translateX(0)}
+      20%{transform:translateX(-8px)}
+      40%{transform:translateX(8px)}
+      60%{transform:translateX(-6px)}
+      80%{transform:translateX(6px)}
+    }
+
+    /* Confetti */
+    #confetti{position:fixed;inset:0;pointer-events:none;z-index:40;overflow:hidden}
+    .confetti-piece{
+      position:fixed;top:-12px;width:10px;height:14px;opacity:.9;
+      will-change:transform,opacity;
+      animation:fall linear forwards;
+    }
+    @keyframes fall{
+      to{transform:translateY(110vh) rotate(720deg);opacity:0}
+    }
+    @media (prefers-reduced-motion: reduce){
+      .shake{animation:none}
+      .confetti-piece{display:none}
+    }
+
+    /* Quick toast */
+    #toast{
+      position:fixed;top:12px;left:50%;transform:translate(-50%,-10px);
+      background:#111827;color:#fff;border-radius:.6rem;
+      padding:.5rem .8rem;box-shadow:0 10px 25px rgba(0,0,0,.25);
+      opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;z-index:60;
+      font-weight:800;letter-spacing:.2px
+    }
+    #toast.show{opacity:1;transform:translate(-50%,0)}
+
+    /* Start overlay */
+    #overlay{
+      position:fixed;inset:0;background:rgba(16,24,40,.75);
+      display:flex;align-items:center;justify-content:center;z-index:50
+    }
+    .panel{
+      width:min(480px,92%);background:#fff;border-radius:1rem;padding:1.2rem 1.1rem 1.25rem;
+      box-shadow:0 14px 34px rgba(0,0,0,.35);animation:pop .2s ease-out
+    }
+    @keyframes pop{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .panel h2{margin:.2rem 0 1rem;font-size:1.35rem}
+    .row{display:flex;gap:.55rem;flex-wrap:wrap}
+    .group{margin:.55rem 0}
+    .option{display:flex;align-items:center;gap:.45rem;margin:.25rem 0}
+    .radioWrap{background:#f6f7fb;border:1px solid #dfe4f2;border-radius:.6rem;padding:.55rem .75rem}
+    .startBtn{width:100%;margin-top:.7rem;background:var(--accent);color:#fff}
+    .muted{color:var(--muted);font-size:.9rem}
+
+    /* Progress (target mode) */
+    .progress{
+      height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:.4rem;display:none
+    }
+    .progress > span{display:block;height:100%;background:linear-gradient(90deg,#34d399,#10b981);width:0%}
+
+    /* Hints Drawer */
+    #drawerShade{
+      position:fixed;inset:0;background:rgba(2,6,23,.32);backdrop-filter:blur(2px);
+      opacity:0;visibility:hidden;transition:.2s;z-index:49;
+    }
+    #drawerShade.open{opacity:1;visibility:visible}
+    #hintDrawer{
+      position:fixed;top:0;right:-480px;height:100vh;width:min(480px,92%);
+      background:#fff;box-shadow:-10px 0 30px rgba(0,0,0,.25);z-index:50;
+      transition:right .22s ease-out;display:flex;flex-direction:column;
+    }
+    #hintDrawer.open{right:0}
+    .drawerHead{
+      display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem;border-bottom:1px solid #e5e7eb
+    }
+    .drawerBody{padding:1rem 1.2rem;overflow:auto}
+    .tabs{display:flex;gap:.35rem;margin-bottom:.7rem}
+    .tabBtn{
+      background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;font-weight:800;
+      padding:.4rem .7rem;border-radius:.6rem;cursor:pointer
+    }
+    .tabBtn.active{background:#4338ca;color:#fff;border-color:#4338ca}
+    .hintCard{
+      border:1px solid #e5e7eb;border-radius:.75rem;padding:.8rem 1rem;margin:.6rem 0;background:#fbfdff
+    }
+    .hintCard h4{margin:.1rem 0 .4rem;font-size:1rem}
+    code{background:#f1f5f9;padding:.1rem .35rem;border-radius:.35rem}
+    .exBox{border-left:4px solid #60a5fa;padding:.55rem .8rem;background:#f8fbff;margin:.5rem 0;border-radius:.15rem}
+  </style>
+</head>
+<body>
+  <!-- ===== Start Menu ===== -->
+  <div id="overlay" role="dialog" aria-modal="true">
+    <div class="panel">
+      <h2>Start Quiz — Percentage Multipliers</h2>
+      <div class="group">
+        <label for="nameInput" style="font-weight:700">Name</label>
+        <input id="nameInput" type="text" placeholder="Enter your name" style="width:100%;padding:.6rem .7rem;border:1.8px solid #c6cfd9;border-radius:.5rem;margin-top:.35rem">
+      </div>
+
+      <div class="group">
+        <div style="font-weight:700;margin-bottom:.2rem">Mode</div>
+        <div class="row">
+          <label class="radioWrap option"><input type="radio" name="mode" value="timer" checked> Timed</label>
+          <label class="radioWrap option"><input type="radio" name="mode" value="target"> Target score</label>
+        </div>
+      </div>
+
+      <div id="timerGroup" class="group">
+        <div style="font-weight:700;margin-bottom:.2rem">Time limit</div>
+        <label class="option"><input type="radio" name="timer" value="600" checked> 10 minutes</label>
+        <label class="option"><input type="radio" name="timer" value="1200"> 20 minutes</label>
+        <label class="option"><input type="radio" name="timer" value="none"> No limit</label>
+      </div>
+
+      <div id="scoreGroup" class="group" style="display:none">
+        <label for="scoreInput" style="font-weight:700">Target score</label>
+        <input id="scoreInput" type="number" min="1" placeholder="e.g. 20" style="width:100%;padding:.55rem .7rem;border:1.8px solid #c6cfd9;border-radius:.5rem;margin-top:.35rem">
+        <div class="muted">You’ll earn <b>1 point</b> per correct answer.</div>
+      </div>
+
+      <button id="startBtn" class="startBtn">Start</button>
+      <div class="muted" style="margin-top:.6rem">
+        Enter multipliers like <b>1.24</b>, <b>0.80</b>, or <b>0.37</b> — no % signs.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Confetti & Toast Layers ===== -->
+  <div id="confetti" aria-hidden="true"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ===== Main Card ===== -->
+  <div class="card" id="card">
+    <div class="header">
+      <h1>Percentage Multiplier Practice</h1>
+      <span class="badge" title="Your name">👤 <span id="playerName">—</span></span>
+      <span class="badge" title="Timer">⏱ <span id="timer">--:--</span></span>
+      <span class="badge" title="Goal">🏆 <span id="goal">—</span></span>
+      <span class="badge" title="Score">✅ <span id="score">0</span></span>
+      <span class="badge" title="Streak">🔥 <span id="streak">0</span></span>
+    </div>
+
+    <div class="body">
+      <div id="question"></div>
+
+      <div class="note">Answer with the <b>multiplier only</b> (what you would multiply the original amount by). Do <b>not</b> calculate the final amount.</div>
+
+      <label id="ansLabel" for="ansInput">Your answer (multiplier)</label>
+      <input id="ansInput" type="number" step="0.001" inputmode="decimal" placeholder="e.g. 1.24, 0.80, 0.37">
+
+      <div id="feedback" aria-live="polite"></div>
+
+      <div class="controls">
+        <button id="checkBtn">Check</button>
+        <button id="nextBtn">Next question</button>
+        <button id="hintBtn" title="Open hints & worked examples">Hints & Examples</button>
+      </div>
+
+      <div class="progress" id="progress"><span id="bar"></span></div>
+    </div>
+  </div>
+
+  <!-- ===== Hints Drawer ===== -->
+  <div id="drawerShade" aria-hidden="true"></div>
+  <aside id="hintDrawer" aria-label="Hints and Examples">
+    <div class="drawerHead">
+      <strong>Hints & Examples</strong>
+      <button id="closeDrawer" class="tabBtn" style="background:#0f172a;color:#fff;border-color:#0f172a">Close ✕</button>
+    </div>
+    <div class="drawerBody">
+      <div class="tabs">
+        <button class="tabBtn active" data-tab="thisQ">This question</button>
+        <button class="tabBtn" data-tab="examples">Worked examples</button>
+      </div>
+
+      <!-- Generic, process-only: This question -->
+      <div id="tab-thisQ">
+        <div class="hintCard">
+          <h4 id="thisQTitle">How to think about it</h4>
+          <div id="thisQBody">
+            <!-- Filled dynamically but NEVER with the actual answer or the actual numbers -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Static: Worked examples (not tied to the current question) -->
+      <div id="tab-examples" style="display:none">
+        <div class="hintCard">
+          <h4>Increase by <b>24%</b></h4>
+          <div class="exBox">
+            Suppose a jacket costs <b>£240</b> and the price increases by <b>24%</b>.<br>
+            Multiplier = <code>1 + 24/100 = 1.24</code><br>
+            (You would do <code>240 × 1.24</code> to get the new price — but here we only need <b>1.24</b>.)
+          </div>
+        </div>
+        <div class="hintCard">
+          <h4>Decrease by <b>20%</b></h4>
+          <div class="exBox">
+            A pair of trainers is <b>£80</b>, with <b>20%</b> off.<br>
+            Multiplier = <code>1 − 20/100 = 0.80</code><br>
+            (Final price would be <code>80 × 0.80</code>; the multiplier is <b>0.80</b>.)
+          </div>
+        </div>
+        <div class="hintCard">
+          <h4>Find <b>37%</b> of an amount</h4>
+          <div class="exBox">
+            Find <b>37%</b> of <b>£500</b> (e.g., a tip).<br>
+            Multiplier = <code>37/100 = 0.37</code><br>
+            (You’d do <code>500 × 0.37</code>; the multiplier is <b>0.37</b>.)
+          </div>
+        </div>
+        <div class="hintCard">
+          <h4>Formulas to remember</h4>
+          <ul style="margin:.25rem 0 .1rem;padding-left:1.1rem">
+            <li><b>Increase by p%</b> → multiply by <code>1 + p/100</code></li>
+            <li><b>Decrease by p%</b> → multiply by <code>1 − p/100</code></li>
+            <li><b>Find p% of A</b> → multiply by <code>p/100</code></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <script>
+    /* ---------------- helpers ---------------- */
+    const pad = n => String(n).padStart(2,'0');
+    const fmt = s => s===null ? '∞' : `${Math.floor(s/60)}:${pad(s%60)}`;
+    const rnd = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
+    const choice = arr => arr[rnd(0,arr.length-1)];
+    const clamp = (v,min,max)=> Math.min(max,Math.max(min,v));
+    const approxEq = (a,b,tol=1e-3)=> Math.abs(a-b) <= tol;
+    const stepRnd = (min, max, step) => {
+      const n = Math.round((Math.random()*(max-min)+min)/step)*step;
+      return Math.max(min, Math.min(max, n));
+    };
+    const fmtInt = x => x.toLocaleString('en-GB');
+    const fmtMoney = (n, sym) => sym + n.toLocaleString('en-GB');
+    const fmtMultiplier = x => (Math.round(x*1000)/1000).toString();
+
+    /* ---------------- confetti ---------------- */
+    function confettiBurst(count=140){
+      const colors = ['#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#14b8a6','#e11d48'];
+      const root = document.getElementById('confetti');
+      const pieces = [];
+      for(let i=0;i<count;i++){
+        const p = document.createElement('i');
+        p.className='confetti-piece';
+        const size = rnd(8,12);
+        p.style.width = size+'px';
+        p.style.height = rnd(10,16)+'px';
+        p.style.left = rnd(0,100)+'%';
+        p.style.background = colors[rnd(0,colors.length-1)];
+        p.style.transform = `translateY(-12px) rotate(${rnd(0,360)}deg)`;
+        p.style.animationDuration = (Math.random()*0.8+0.9)+'s';
+        p.style.animationDelay = (Math.random()*0.15)+'s';
+        p.style.borderRadius = Math.random()<0.4 ? '50% 50% 30% 70% / 50% 50% 70% 30%' : '2px';
+        root.appendChild(p);
+        pieces.push(p);
+      }
+      setTimeout(()=> pieces.forEach(el=> el.remove()), 1500);
+    }
+
+    /* ---------------- toast ---------------- */
+    const toastEl = document.getElementById('toast');
+    let toastTimer=null;
+    function flashToast(msg){
+      clearTimeout(toastTimer);
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      toastTimer = setTimeout(()=> toastEl.classList.remove('show'), 1200);
+    }
+
+    /* ---------------- state ---------------- */
+    let score=0, streak=0, player='—', mode='timer', timeLeft=null, target=null, timerID=null;
+    let cur = { ans:null, type:null, percent:null, item:'', amountStr:'', amountNum:0, unit:'', currency:null, name:'', qStart: performance.now() };
+
+    /* ---------------- DOM elements ---------------- */
+    const qEl = document.getElementById('question');
+    const ansEl = document.getElementById('ansInput');
+    const fbEl = document.getElementById('feedback');
+    const scoreEl = document.getElementById('score');
+    const streakEl = document.getElementById('streak');
+    const playerEl = document.getElementById('playerName');
+    const timerEl = document.getElementById('timer');
+    const goalEl = document.getElementById('goal');
+    const checkBtn = document.getElementById('checkBtn');
+    const nextBtn  = document.getElementById('nextBtn');
+    const hintBtn  = document.getElementById('hintBtn');
+    const cardEl   = document.getElementById('card');
+    const progress = document.getElementById('progress');
+    const barEl    = document.getElementById('bar');
+
+    // Drawer elements
+    const drawer = document.getElementById('hintDrawer');
+    const shade  = document.getElementById('drawerShade');
+    const closeDrawerBtn = document.getElementById('closeDrawer');
+    const tabBtns = document.querySelectorAll('.tabBtn[data-tab]');
+    const tabThisQ = document.getElementById('tab-thisQ');
+    const tabExamples = document.getElementById('tab-examples');
+    const thisQBody = document.getElementById('thisQBody');
+    const thisQTitle = document.getElementById('thisQTitle');
+
+    /* ---------------- content banks ---------------- */
+    const names = ['Amir','Bella','Chen','Diego','Esme','Fatima','Gita','Hugo','Iris','Jae','Kai','Leila','Maya','Niko','Orla','Priya','Quinn','Rafi','Sanaa','Theo','Uma','Vinh','Wei','Xavi','Yara','Zane'];
+
+    // contexts include whether they are money or units (to attach an amount)
+    const incContexts = [
+      {text:'a monthly gym membership', kind:'money'},
+      {text:'the price of a latte', kind:'money'},
+      {text:'the budget for a school trip', kind:'money'},
+      {text:'weekly running distance', kind:'unit', unit:'km'},
+      {text:'daily study time', kind:'unit', unit:'minutes'},
+      {text:'the price of handmade candles', kind:'money'}
+    ];
+    const decContexts = [
+      {text:'a restaurant bill', kind:'money'},
+      {text:'a pair of trainers', kind:'money'},
+      {text:'a concert ticket', kind:'money'},
+      {text:'screen time', kind:'unit', unit:'hours'},
+      {text:'weekly fuel use', kind:'unit', unit:'litres'}
+    ];
+    const ofContexts = [
+      {text:'a restaurant bill (for a tip)', kind:'money'},
+      {text:'a hoodie price (for a discount estimate)', kind:'money'},
+      {text:'a journey distance', kind:'unit', unit:'km'},
+      {text:'a recipe ingredient amount', kind:'unit', unit:'grams'},
+      {text:'a study plan time', kind:'unit', unit:'minutes'}
+    ];
+
+    // Percent pools (1–100). Allow 100% for increase and of; allow 1–99% for decrease to avoid the trivial 0 multiplier.
+    const P_INCREASE = [1,2,3,4,5,7.5,8,9,10,12,12.5,15,17.5,18,20,22.5,24,25,27.5,30,32.5,35,37,40,42.5,45,47.5,50,55,60,65,70,75,80,85,90,95,100];
+    const P_DECREASE = [1,2,3,4,5,7.5,8,9,10,12,12.5,15,17.5,18,20,22.5,24,25,27.5,30,32.5,35,37,40,42.5,45,47.5,50,55,60,65,70,75,80,85,90,95,99];
+    const P_OF       = [1,2,3,4,5,6,7,7.5,8,9,10,12,12.5,15,17.5,18,20,22,22.5,24,25,30,33,35,37,40,45,50,60,65,70,75,80,85,90,95,100];
+
+    const currencies = ['£','$','€'];
+
+    function toMultiplier(type, p){
+      if(type==='inc') return 1 + p/100;
+      if(type==='dec') return 1 - p/100;
+      return p/100; // 'of'
+    }
+
+    /* ---------------- amount generators ---------------- */
+    function genMoney(){
+      const sym = choice(currencies);
+      const amount = stepRnd(10, 800, 5); // nice round prices
+      return {amount, sym, display: fmtMoney(amount, sym)};
+    }
+    function genUnit(unit){
+      let amount=0;
+      if(unit==='km') amount = stepRnd(5, 200, 5);
+      else if(unit==='minutes') amount = stepRnd(10, 180, 5);
+      else if(unit==='hours') amount = stepRnd(1, 12, 1);
+      else if(unit==='litres') amount = stepRnd(5, 80, 5);
+      else if(unit==='grams') amount = stepRnd(50, 1000, 25);
+      else amount = stepRnd(10, 500, 10);
+      return {amount, unit, display: `${fmtInt(amount)} ${unit}`};
+    }
+
+    /* ---------------- drawer (hints) ---------------- */
+    function openDrawer(){
+      drawer.classList.add('open');
+      shade.classList.add('open');
+      updateThisQHint();
+    }
+    function closeDrawer(){
+      drawer.classList.remove('open');
+      shade.classList.remove('open');
+    }
+    shade.onclick = closeDrawer;
+    closeDrawerBtn.onclick = closeDrawer;
+    hintBtn.onclick = openDrawer;
+
+    tabBtns.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        tabBtns.forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        const which = btn.dataset.tab;
+        if(which==='thisQ'){ tabThisQ.style.display='block'; tabExamples.style.display='none'; }
+        else { tabThisQ.style.display='none'; tabExamples.style.display='block'; }
+      });
+    });
+
+    // Process-only hints — never reveal this question's numbers or answer
+    function updateThisQHint(){
+      let title = 'How to think about it';
+      let html = '';
+      if(cur.type==='inc'){
+        title = 'Increase: what to multiply by';
+        html = `
+          <p>This is an <b>increase</b> question. Ignore the actual numbers and follow this process:</p>
+          <ol>
+            <li>Identify the percentage <b>p%</b> of the increase.</li>
+            <li>Convert <b>p%</b> to a decimal by doing <code>p ÷ 100</code>.</li>
+            <li>For increases, the multiplier is <code>1 + (p/100)</code>.</li>
+            <li>Use only that multiplier as your answer (do <em>not</em> calculate the new amount).</li>
+          </ol>
+          <p class="muted">Want to see numbers? Switch to the <b>Worked examples</b> tab (those are generic, not this question).</p>
+        `;
+      } else if(cur.type==='dec'){
+        title = 'Decrease: what to multiply by';
+        html = `
+          <p>This is a <b>decrease</b> (discount) question. Use this checklist:</p>
+          <ol>
+            <li>Identify the percentage <b>p%</b> of the decrease.</li>
+            <li>Convert <b>p%</b> to a decimal via <code>p ÷ 100</code>.</li>
+            <li>For decreases, the multiplier is <code>1 − (p/100)</code>.</li>
+            <li>Answer with just that multiplier (don’t work out the final amount).</li>
+          </ol>
+          <p class="muted">For a fully worked numerical example, see the <b>Worked examples</b> tab.</p>
+        `;
+      } else {
+        title = 'Finding p% of an amount';
+        html = `
+          <p>This question asks for <b>p%</b> of an amount. Steps:</p>
+          <ol>
+            <li>Take the percentage <b>p%</b> and compute <code>p ÷ 100</code>.</li>
+            <li>The multiplier for “p% of something” is simply <code>p/100</code>.</li>
+            <li>Provide that multiplier only (no final amount needed).</li>
+          </ol>
+          <p class="muted">See the <b>Worked examples</b> tab for a numerical demonstration.</p>
+        `;
+      }
+      thisQTitle.textContent = title;
+      thisQBody.innerHTML = html;
+    }
+
+    /* ---------------- question generator ---------------- */
+    function newQuestion(){
+      fbEl.textContent=''; fbEl.className='';
+      checkBtn.disabled=false; nextBtn.style.display='none';
+      ansEl.value=''; ansEl.focus();
+      cardEl.classList.remove('shake');
+
+      const kind = choice(['inc','dec','of']);
+      let p, ctx, who, amountDisplay, amountNum, currencySym=null, unitLbl=null, fullAmountStr;
+
+      if(kind==='inc'){
+        p = choice(P_INCREASE);
+        ctx = choice(incContexts);
+      }else if(kind==='dec'){
+        p = choice(P_DECREASE);
+        ctx = choice(decContexts);
+      }else{
+        p = choice(P_OF);
+        ctx = choice(ofContexts);
+      }
+
+      who = choice(names);
+
+      if(ctx.kind==='money'){
+        const m = genMoney();
+        amountNum = m.amount; currencySym = m.sym; amountDisplay = m.display; fullAmountStr = amountDisplay;
+      }else{ // unit
+        const u = genUnit(ctx.unit);
+        amountNum = u.amount; unitLbl = u.unit; amountDisplay = u.display; fullAmountStr = amountDisplay;
+      }
+
+      let prompt='';
+      if(kind==='inc'){
+        prompt = `${who} wants to increase <b>${ctx.text}</b> from <b>${fullAmountStr}</b> by <b>${p}%</b>. What single multiplier should they use to get the new value?`;
+      }else if(kind==='dec'){
+        prompt = `${who} gets <b>${p}%</b> off <b>${ctx.text}</b>. The original amount was <b>${fullAmountStr}</b>. What multiplier gives the discounted value?`;
+      }else{
+        prompt = `${who} needs to find <b>${p}%</b> of <b>${fullAmountStr}</b> (${ctx.text}). What multiplier should they use?`;
+      }
+
+      qEl.innerHTML = prompt;
+
+      // store for checking and for process-only hint routing
+      cur.ans   = toMultiplier(kind,p);
+      cur.type  = kind;
+      cur.percent = p;
+      cur.item = ctx.text;
+      cur.amountStr = fullAmountStr;
+      cur.amountNum = amountNum;
+      cur.unit = unitLbl;
+      cur.currency = currencySym;
+      cur.name = who;
+      cur.qStart = performance.now(); // mark start for quick-answer detection
+    }
+
+    /* ---------------- check answer ---------------- */
+    function doShake(){
+      cardEl.classList.remove('shake');
+      void cardEl.offsetWidth; // restart animation
+      cardEl.classList.add('shake');
+      ansEl.style.borderColor = 'var(--danger)';
+      ansEl.style.background = '#ffecec';
+      setTimeout(()=>{ ansEl.style.borderColor = '#c6cfd9'; ansEl.style.background = '#fff'; }, 300);
+    }
+
+    checkBtn.onclick = () => {
+      const raw = String(ansEl.value).trim();
+      const v = Number(raw);
+      if(!raw || Number.isNaN(v)){
+        fbEl.textContent = "Please enter a number like 1.24, 0.80 or 0.37. If you're not sure, ask your teacher for help.";
+        fbEl.className='no';
+        doShake();
+        return;
+      }
+
+      const ok = approxEq(v, cur.ans, 1e-3);
+
+      if(ok){
+        // Quick answer flash (under 4 seconds)
+        const elapsed = performance.now() - (cur.qStart || performance.now());
+        if(elapsed < 4000){
+          flashToast("Wow, that was quick!! ⚡️");
+        }
+
+        fbEl.innerHTML = `Correct! ✅ Multiplier = <b>${fmtMultiplier(cur.ans)}</b>.`;
+        fbEl.className='yes';
+        streak += 1;
+        score += 1; // increment in ones per correct question
+        scoreEl.textContent = score;
+        streakEl.textContent = streak;
+        checkBtn.disabled = true;
+        nextBtn.style.display='inline-block';
+        confettiBurst(150);
+
+        if(mode==='target' && target){
+          const pct = clamp(Math.round((score/target)*100),0,100);
+          barEl.style.width = pct + '%';
+          if(score >= target){
+            setTimeout(()=>{ alert('🎉 Target reached! Great work.'); location.reload(); }, 200);
+          }
+        }
+      }else{
+        fbEl.textContent = "Not quite — try again. If you're not sure, ask your teacher for help.";
+        fbEl.className='no';
+        doShake();
+        streak = 0;
+        streakEl.textContent = streak;
+      }
+    };
+
+    nextBtn.onclick = newQuestion;
+
+    // Enter key convenience
+    ansEl?.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter'){
+        if(nextBtn.style.display==='inline-block'){ newQuestion(); }
+        else{ checkBtn.click(); }
+      }
+    });
+
+    /* ---------------- timer ---------------- */
+    function startTimer(){
+      clearInterval(timerID);
+      timerEl.textContent = fmt(timeLeft);
+      if(timeLeft===null) return;
+      timerID = setInterval(()=>{
+        timeLeft--;
+        timerEl.textContent = fmt(timeLeft);
+        if(timeLeft<0){
+          clearInterval(timerID);
+          alert("⏰ Time's up!");
+          location.reload();
+        }
+      },1000);
+    }
+
+    /* ---------------- menu handlers ---------------- */
+    function toggleGroups(){
+      const m = document.querySelector('input[name="mode"]:checked').value;
+      document.getElementById('timerGroup').style.display = m==='timer' ? 'block' : 'none';
+      document.getElementById('scoreGroup').style.display = m==='target' ? 'block' : 'none';
+    }
+    document.querySelectorAll('input[name="mode"]').forEach(r => r.addEventListener('change', toggleGroups));
+
+    document.getElementById('startBtn').onclick = () => {
+      player = document.getElementById('nameInput').value.trim() || 'Player';
+      playerEl.textContent = player;
+      mode = document.querySelector('input[name="mode"]:checked').value;
+
+      if(mode==='timer'){
+        const sel = document.querySelector('input[name="timer"]:checked').value;
+        timeLeft = sel==='none' ? null : parseInt(sel,10);
+        goalEl.textContent = '—';
+        progress.style.display='none';
+        startTimer();
+      }else{
+        target = parseInt(document.getElementById('scoreInput').value,10);
+        if(!Number.isInteger(target) || target<1){
+          alert('Please enter a positive whole number for the target score.');
+          return;
+        }
+        goalEl.textContent = target;
+        progress.style.display='block';
+        barEl.style.width = '0%';
+        timeLeft = null; timerEl.textContent = '∞';
+      }
+
+      document.getElementById('overlay').style.display='none';
+      newQuestion();
+    };
+
+    window.onload = toggleGroups;
+  </script>
+</body>
+</html>
+
 
